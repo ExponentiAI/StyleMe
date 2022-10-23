@@ -8,13 +8,13 @@ import torchvision.datasets as Dataset
 import torchvision.utils as vutils
 from torch import nn
 from torch.utils.data import DataLoader
-
-from models import Generator, Discriminator, VGGSimple, Adaptive_pool,AdaLIN, get_batched_gram_matrix
+import matplotlib.pyplot as plt
+from models import Generator, Discriminator, VGGSimple, Adaptive_pool,AdaLIN, get_batched_gram_matrix,Generator_UGATIT,adain
 from operation import InfiniteSamplerWrapper, trans_maker
 import numpy
 import argparse
 import tqdm
-
+from metrics import calculate_fid_modify
 
 torch.backends.cudnn.benchmark = True
 
@@ -63,6 +63,8 @@ def save_image(net_g, dataloader, saved_image_folder, n_iter):
         real = []
         for i, d in enumerate(dataloader):
             if i < 2:
+                # net_f=netG_A2B(d[0].to(device))[0]
+                # f_3 = vgg(d[0].to(device), base=base)[2]
                 f_3 = vgg(d[0].to(device), base=base)[2]
                 imgs.append(net_g(f_3).cpu())
                 real.append(d[0])
@@ -73,7 +75,9 @@ def save_image(net_g, dataloader, saved_image_folder, n_iter):
         imgs = torch.cat(imgs, dim=0)
         real = torch.cat(real, dim=0)
         sss = torch.cat([imgs, real], dim=0)
-        
+        # 计算fid指标
+        fid = calculate_fid_modify(imgs[0,0,:,:].detach().numpy(), real[0,0,:,:].detach().numpy())
+        print('fid-------------', fid)
         vutils.save_image( sss, "%s/iter_%d.jpg"%(saved_image_folder, n_iter), range=(-1,1), normalize=True)
         del imgs
     net_g.train()
@@ -106,9 +110,8 @@ def train(net_g, net_d_style, max_iteration):
 
         fake_img = net_g(cf_3)
         tf_1, tf_2, tf_3, tf_4, tf_5 = vgg(fake_img, base=base)
-
-        target_3 = AdaLIN(cf_3, sf_3)
-
+        target_3 = adain(cf_3, sf_3)    #torch.Size([4, 256, 32, 32])
+        # target_3 = AdaLIN(cf_3, sf_3)  #更换为AdaLIN
         gram_sf_4 = gram_reshape(get_batched_gram_matrix(sf_4))
         gram_sf_3 = gram_reshape(get_batched_gram_matrix(sf_3))
         gram_sf_2 = gram_reshape(get_batched_gram_matrix(sf_2))
@@ -126,6 +129,7 @@ def train(net_g, net_d_style, max_iteration):
         D_R = train_d(net_d_style, real_style_sample, label="real")
         ### 3.2. train D_style on fake data
         D_F = train_d(net_d_style, fake_style_sample.detach(), label="fake")
+
         optDS.step()
         
         ## 2. train Generator
@@ -133,7 +137,6 @@ def train(net_g, net_d_style, max_iteration):
         ### 2.1. train G as real image
         pred_gs = net_d_style(fake_style_sample)
         err_gs = -pred_gs.mean()
-   
         G_B = torch.sigmoid(pred_gs).mean().item() #+ torch.sigmoid(pred_gc).mean().item()
 
         err_rec = F.mse_loss(tf_3, target_3)
@@ -143,6 +146,8 @@ def train(net_g, net_d_style, max_iteration):
                     gram_loss(tf_2, sf_2))
 
         G_rec = err_gram.item()
+
+
 
         err = err_gs + mse_weight*err_rec + gram_weight*err_gram
         err.backward()
@@ -167,8 +172,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Style transfer GAN, during training, the model will learn to take a image from one specific catagory and transform it into another style domain')
     print(os.path.join(os.getcwd(),"art-landscape-rgb-512"))
-    patha="E:\download\Self-Supervised-Sketch-to-Image-Synthesis-PyTorch-main\Self-Supervised-Sketch-to-Image-Synthesis-PyTorch-main\sketch_styletransfer\\art-landscape-rgb-512"
-    pathb="E:\download\Self-Supervised-Sketch-to-Image-Synthesis-PyTorch-main\Self-Supervised-Sketch-to-Image-Synthesis-PyTorch-main\sketch_styletransfer\\art-landscape-sketch"
+    patha="RGB/"
+    pathb="Sketch/"
     parser.add_argument('--path_a', type=str, default=patha, help='path of resource dataset, should be a folder that has one or many sub image folders inside')
     parser.add_argument('--path_b', type=str, default=pathb, help='path of target dataset, should be a folder that has one or many sub image folders inside')
     parser.add_argument('--im_size', type=int, default=256, help='resolution of the generated images')
@@ -191,9 +196,10 @@ if __name__ == '__main__':
     mse_weight = args.mse_weight
     gram_weight = args.gram_weight
     max_iteration = args.total_iter
-    device = torch.device("cuda:%d"%(args.gpu_id))
+    # device = torch.device("cuda:%d"%(args.gpu_id))
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(torch.cuda.is_available())
-    print(torch.cuda.current_device())
+    # print(torch.cuda.current_device())
     im_size = args.im_size
     if im_size == 128:
         base = 4
@@ -206,7 +212,7 @@ if __name__ == '__main__':
   
 
     log_interval = 100
-    save_folder = './'
+    save_folder = './model'
     number_model_to_save = 30
 
     vgg = VGGSimple()
@@ -214,6 +220,9 @@ if __name__ == '__main__':
     vgg.load_state_dict(torch.load(os.path.join(root_path,'vgg-feature-weights.pth'), map_location=lambda a,b:a))
     vgg.to(device)
     vgg.eval()
+
+
+
     for p in vgg.parameters():
         p.requires_grad = False
 
@@ -227,13 +236,13 @@ if __name__ == '__main__':
             sampler=InfiniteSamplerWrapper(dataset_B), num_workers=0, pin_memory=False))
 
     net_g = Generator(infc=256, nfc=128)
-
+    netG_A2B = Generator_UGATIT(image_size=256).to(device)
     net_d_style = Discriminator(nfc=128*3, norm_layer=nn.BatchNorm2d)
     gram_reshape = Adaptive_pool(128, 16)
     # this style discriminator take input: 512x512 gram matrix from 512x8x8 vgg feature,
     # the reshaped pooled input size is: 256x16x16
     
-    if args.checkpoint is not 'None':
+    if args.checkpoint != 'None':
         checkpoint = torch.load(args.checkpoint, map_location=lambda storage, loc: storage)
         net_g.load_state_dict(checkpoint['g'])
         net_d_style.load_state_dict(checkpoint['ds'])
@@ -245,7 +254,7 @@ if __name__ == '__main__':
     optG = optim.Adam(net_g.parameters(), lr=args.lr, betas=(0.5, 0.99))
     optDS = optim.Adam(net_d_style.parameters(), lr=args.lr, betas=(0.5, 0.99))
     
-    if args.checkpoint is not 'None':
+    if args.checkpoint != 'None':
         opt_path = args.checkpoint.replace("_model.pth", "_opt.pth")
         try:
             opt_weights = torch.load(opt_path, map_location=lambda a, b: a)

@@ -39,7 +39,7 @@ def AdaLIN(content_feat,style_feat):
 
         assert (content_feat.size()[:2]==style_feat.size()[:2])
 
-        rho=Parameter(torch.Tensor(1,512,1,1,))
+        rho=Parameter(torch.Tensor(4,256,32,32,))       #维度修改了，原来是 rho=Parameter(torch.Tensor(1,512,1,1,))
         rho=rho.data.fill_(0.9)
 
         size=content_feat.size()
@@ -50,6 +50,16 @@ def AdaLIN(content_feat,style_feat):
         out=rho.expand(size)*out_style+(1-rho.expand(size))*out_content
         return out
 
+def adain(content_feat, style_feat):
+    assert (content_feat.size()[:2] == style_feat.size()[:2])
+    size = content_feat.size()
+    style_mean, style_std = calc_mean_std(style_feat)
+    content_mean, content_std = calc_mean_std(content_feat)
+
+    normalized_feat = (content_feat - content_mean.expand(
+        size)) / content_std.expand(size)
+    normalized_features = normalized_feat * style_std.expand(size) + style_mean.expand(size)
+    return normalized_features  #torch.Size([4, 256, 32, 32])
 
 def get_batched_gram_matrix(input):
     # take a batch of features: B X C X H X W
@@ -268,7 +278,24 @@ class DownConvBlock(nn.Module):
         return self.main(x)
 
 
+class ResNetBlock(nn.Module):
+    def __init__(self, dim):
+        super(ResNetBlock, self).__init__()
+        conv_block = []
+        conv_block += [nn.ReflectionPad2d(1),
+                       nn.Conv2d(dim, dim, 3, 1, 0, bias=False),
+                       nn.InstanceNorm2d(dim),
+                       nn.ReLU(True)]
 
+        conv_block += [nn.ReflectionPad2d(1),
+                       nn.Conv2d(dim, dim, 3, 1, 0, bias=False),
+                       nn.InstanceNorm2d(dim)]
+
+        self.conv_block = nn.Sequential(*conv_block)
+
+    def forward(self, x):
+        out = x + self.conv_block(x)
+        return out
 
 class Generator(nn.Module):
     def __init__(self, infc=512, nfc=64, nc_out=3):
@@ -286,48 +313,275 @@ class Generator(nn.Module):
         self.final = nn.Sequential(
             spectral_norm( nn.Conv2d(nfc*2, nc_out, 3, 1, 1, bias=True) ),
             nn.Tanh())
-
+        self.netG_A2B = Generator_UGATIT(image_size=256)
     def forward(self, input):
-        gap=nn.AdaptiveAvgPool2d(input,1)
-        x=DownConvBlock(input)
-        gap_logit = self.gap_fc(gap.view(gap.shape[0], -1))
-        gap_weight = list(self.gap_fc.parameters())[0]
-        gap = x * gap_weight
-        gmp=nn.AdaptiveMaxPool2d(input,1)
-        gmp_logit=self.gmp_fc(gmp.view(x.shape[0],-1))
-        gmp_weight=list(self.gmp_fc.parameters())[0]
-        gmp=x*gmp_weight
-        cam_logit = torch.cat([gap_logit, gmp_logit], 1)
-        x = torch.cat([gap, gmp], 1)
-        input = self.relu(self.conv1x1(x))
-        decode_32 = self.decode_32(input)
+
+        decode_32 = self.decode_32(input)      # input torch.Size([8, 256, 32, 32])
         decode_64 = self.decode_64(decode_32)
         decode_128 = self.decode_128(decode_64)
 
-        output = self.final(decode_128)
+        output = self.final(decode_128)  #output  torch.Size([8, 3, 256, 256])
+        output=self.netG_A2B(output)[0]         #此处解码后，再经过Generator_UGATIT 的处理后再输出
         return output
+
+class Generator_UGATIT(nn.Module):
+    def __init__(self, image_size=256):
+        super(Generator_UGATIT, self).__init__()
+        down_layer = [
+            nn.ReflectionPad2d(3),
+            nn.Conv2d(3, 64, 7, 1, 0, bias=False),
+            nn.InstanceNorm2d(64),
+            nn.ReLU(inplace=True),
+
+            # Down-Sampling
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(64, 128, 3, 2, 0, bias=False),
+            nn.InstanceNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(128, 256, 3, 2, 0, bias=False),
+            nn.InstanceNorm2d(256),
+            nn.ReLU(inplace=True),
+
+            # Down-Sampling Bottleneck
+            ResNetBlock(256),
+            ResNetBlock(256),
+            ResNetBlock(256),
+            ResNetBlock(256),
+        ]
+
+        # Class Activation Map
+        self.gap_fc = nn.Linear(256, 1, bias=False)
+        self.gmp_fc = nn.Linear(256, 1, bias=False)
+        self.conv1x1 = nn.Conv2d(512, 256, 1, 1, bias=True)
+        self.relu = nn.ReLU(inplace=True)
+
+        # Gamma, Beta block
+        fc = [
+            nn.Linear(image_size * image_size * 16, 256, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(256, 256, bias=False),
+            nn.ReLU(inplace=True)
+        ]
+
+        self.gamma = nn.Linear(256, 256, bias=False)
+        self.beta = nn.Linear(256, 256, bias=False)
+
+        # Up-Sampling Bottleneck
+        for i in range(4):
+            setattr(self, "ResNetAdaILNBlock_" + str(i + 1), ResNetAdaILNBlock(256))
+
+        up_layer = [
+            nn.Upsample(scale_factor=2, mode="nearest"),
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(256, 128, 3, 1, 0, bias=False),
+            ILN(128),
+            nn.ReLU(inplace=True),
+
+            nn.Upsample(scale_factor=2, mode="nearest"),
+            nn.ReflectionPad2d(1),
+            nn.Conv2d(128, 64, 3, 1, 0, bias=False),
+            ILN(64),
+            nn.ReLU(inplace=True),
+
+            nn.ReflectionPad2d(3),
+            nn.Conv2d(64, 3, 7, 1, 0, bias=False),
+            nn.Tanh()
+        ]
+
+        self.down_layer = nn.Sequential(*down_layer)
+        self.fc = nn.Sequential(*fc)
+        self.up_layer = nn.Sequential(*up_layer)
+
+    def forward(self, inputs):
+        x = self.down_layer(inputs)
+        gap = torch.nn.functional.adaptive_avg_pool2d(x, 1)
+        gap_logit = self.gap_fc(gap.view(x.shape[0], -1))
+        gap_weight = list(self.gap_fc.parameters())[0]
+        gap = x * gap_weight.unsqueeze(2).unsqueeze(3)
+
+        gmp = torch.nn.functional.adaptive_max_pool2d(x, 1)
+        gmp_logit = self.gmp_fc(gmp.view(x.shape[0], -1))
+        gmp_weight = list(self.gmp_fc.parameters())[0]
+        gmp = x * gmp_weight.unsqueeze(2).unsqueeze(3)
+
+        cam_logit = torch.cat([gap_logit, gmp_logit], 1)
+        x = torch.cat([gap, gmp], 1)
+        x = self.relu(self.conv1x1(x))
+
+        x_ = self.fc(x.view(x.shape[0], -1))
+        gamma, beta = self.gamma(x_), self.beta(x_)
+
+        for i in range(4):
+            x = getattr(self, "ResNetAdaILNBlock_" + str(i + 1))(x, gamma, beta)
+        out = self.up_layer(x)
+
+        return out, cam_logit
+
+
+
+
+class ResNetAdaILNBlock(nn.Module):
+    def __init__(self, dim):
+        super(ResNetAdaILNBlock, self).__init__()
+        self.pad1 = nn.ReflectionPad2d(1)
+        self.conv1 = nn.Conv2d(dim, dim, 3, 1, 0, bias=False)
+        self.norm1 = AdaILN(dim)
+        self.relu1 = nn.ReLU(True)
+
+        self.pad2 = nn.ReflectionPad2d(1)
+        self.conv2 = nn.Conv2d(dim, dim, 3, 1, 0, bias=False)
+        self.norm2 = AdaILN(dim)
+
+    def forward(self, x, gamma, beta):
+        out = self.pad1(x)
+        out = self.conv1(out)
+        out = self.norm1(out, gamma, beta)
+        out = self.relu1(out)
+        out = self.pad2(out)
+        out = self.conv2(out)
+        out = self.norm2(out, gamma, beta)
+
+        return out + x
+
+class ILN(nn.Module):
+    def __init__(self, num_features, eps=1e-5):
+        super(ILN, self).__init__()
+        self.eps = eps
+        self.rho = Parameter(torch.Tensor(1, num_features, 1, 1))
+        self.gamma = Parameter(torch.Tensor(1, num_features, 1, 1))
+        self.beta = Parameter(torch.Tensor(1, num_features, 1, 1))
+        self.rho.data.fill_(0.0)
+        self.gamma.data.fill_(1.0)
+        self.beta.data.fill_(0.0)
+
+    def forward(self, x):
+        in_mean, in_var = torch.mean(x, dim=[2, 3], keepdim=True), torch.var(x, dim=[2, 3], keepdim=True)
+        out_in = (x - in_mean) / torch.sqrt(in_var + self.eps)
+        ln_mean, ln_var = torch.mean(x, dim=[1, 2, 3], keepdim=True), torch.var(x, dim=[1, 2, 3], keepdim=True)
+        out_ln = (x - ln_mean) / torch.sqrt(ln_var + self.eps)
+        out = self.rho.expand(x.shape[0], -1, -1, -1) * out_in + (1 - self.rho.expand(x.shape[0], -1, -1, -1)) * out_ln
+        out = out * self.gamma.expand(x.shape[0], -1, -1, -1) + self.beta.expand(x.shape[0], -1, -1, -1)
+
+        return out
+
+class AdaILN(nn.Module):
+    def __init__(self, num_features, eps=1e-5):
+        super(AdaILN, self).__init__()
+        self.eps = eps
+        self.rho = Parameter(torch.Tensor(1, num_features, 1, 1))
+        self.rho.data.fill_(0.9)
+
+    def forward(self, x, gamma, beta):
+        in_mean, in_var = torch.mean(x, dim=[2, 3], keepdim=True), torch.var(x, dim=[2, 3], keepdim=True)
+        out_in = (x - in_mean) / torch.sqrt(in_var + self.eps)
+        ln_mean, ln_var = torch.mean(x, dim=[1, 2, 3], keepdim=True), torch.var(x, dim=[1, 2, 3], keepdim=True)
+        out_ln = (x - ln_mean) / torch.sqrt(ln_var + self.eps)
+        out = self.rho.expand(x.shape[0], -1, -1, -1) * out_in + (1 - self.rho.expand(x.shape[0], -1, -1, -1)) * out_ln
+        out = out * gamma.unsqueeze(2).unsqueeze(3) + beta.unsqueeze(2).unsqueeze(3)
+
+        return out
+
+class ResNetBlock(nn.Module):
+    def __init__(self, dim):
+        super(ResNetBlock, self).__init__()
+        conv_block = []
+        conv_block += [nn.ReflectionPad2d(1),
+                       nn.Conv2d(dim, dim, 3, 1, 0, bias=False),
+                       nn.InstanceNorm2d(dim),
+                       nn.ReLU(True)]
+
+        conv_block += [nn.ReflectionPad2d(1),
+                       nn.Conv2d(dim, dim, 3, 1, 0, bias=False),
+                       nn.InstanceNorm2d(dim)]
+
+        self.conv_block = nn.Sequential(*conv_block)
+
+    def forward(self, x):
+        out = x + self.conv_block(x)
+        return out
+
+
+
+
+
 
 
 class Discriminator(nn.Module):
     def __init__(self, nfc=512, norm_layer=nn.InstanceNorm2d):
         super(Discriminator, self).__init__()
-        self.gap_fc = nn.utils.spectral_norm(nn.Linear(64 * 8, 1, bias=False))
-        self.gmp_fc = nn.utils.spectral_norm(nn.Linear(64 * 8, 1, bias=False))
-        self.conv1x1 = nn.Conv2d(64 * 8 * 2, 64 *8, 1, 1, bias=True)
+        self.gap_fc = nn.utils.spectral_norm(nn.Linear(1, 4, bias=False))       #这里维度修改了原来是64 * 8, 1
+        self.gmp_fc = nn.utils.spectral_norm(nn.Linear(1, 4, bias=False))
+        self.conv1x1 = nn.Conv2d(2, 4, 3, 3, bias=True)
         self.leaky_relu = nn.LeakyReLU(0.2, True)
 
         self.pad = nn.ReflectionPad2d(1)
-        self.conv = nn.utils.spectral_norm(nn.Conv2d(64 * 8, 1, 4, 1, 0, bias=False))
+        self.conv = nn.utils.spectral_norm(nn.Conv2d(4, 4, 1, 1, 0, bias=False))
 
         self.main = nn.Sequential(
-            DownConvBlock(nfc, nfc//2, norm_layer=norm_layer, down=False),
-            DownConvBlock(nfc//2, nfc//4, norm_layer=norm_layer), #4x4
-            spectral_norm( nn.Conv2d(nfc//4, 1, 4, 2, 0) )
+            DownConvBlock(nfc, nfc // 2, norm_layer=norm_layer, down=False),
+            DownConvBlock(nfc // 2, nfc // 4, norm_layer=norm_layer),  # 4x4
+            spectral_norm(nn.Conv2d(nfc // 4, 1, 4, 2, 0))
         )
 	
     def forward(self, input):
         x = self.main(input)
-        gap = torch.nn.functional.adaptive_avg_pool2d(x, 1)
+        gap = torch.nn.functional.adaptive_avg_pool2d(x, 1)     #x   torch.Size([4, 1, 3, 3])
+        gap_logit = self.gap_fc(gap.view(x.shape[0], -1))
+        gap_weight = list(self.gap_fc.parameters())[0]
+        gap = x * gap_weight.unsqueeze(2).unsqueeze(3)
+
+        gmp = torch.nn.functional.adaptive_max_pool2d(x, 1)
+        gmp_logit = self.gmp_fc(gmp.view(x.shape[0], -1))
+        gmp_weight = list(self.gmp_fc.parameters())[0]
+        gmp = x * gmp_weight.unsqueeze(2).unsqueeze(3)
+
+        cam_logit = torch.cat([gap_logit, gmp_logit], 1)
+        x = torch.cat([gap, gmp], 1)
+        x = self.leaky_relu(self.conv1x1(x))
+        # x = self.pad(x)
+        out = self.conv(x)
+
+        return out.view(-1)
+
+class Discriminator_UGATIT(nn.Module):
+    def __init__(self, input_nc, ndf=64, n_layers=5):
+        super(Discriminator_UGATIT, self).__init__()
+        model = [nn.ReflectionPad2d(1),
+                 nn.utils.spectral_norm(
+                 nn.Conv2d(input_nc, ndf, kernel_size=4, stride=2, padding=0, bias=True)),
+                 nn.LeakyReLU(0.2, True)]
+
+        for i in range(1, n_layers - 2):
+            mult = 2 ** (i - 1)
+            model += [nn.ReflectionPad2d(1),
+                      nn.utils.spectral_norm(
+                      nn.Conv2d(ndf * mult, ndf * mult * 2, kernel_size=4, stride=2, padding=0, bias=True)),
+                      nn.LeakyReLU(0.2, True)]
+
+        mult = 2 ** (n_layers - 2 - 1)
+        model += [nn.ReflectionPad2d(1),
+                  nn.utils.spectral_norm(
+                  nn.Conv2d(ndf * mult, ndf * mult * 2, kernel_size=4, stride=1, padding=0, bias=True)),
+                  nn.LeakyReLU(0.2, True)]
+
+        # Class Activation Map
+        mult = 2 ** (n_layers - 2)
+        self.gap_fc = nn.utils.spectral_norm(nn.Linear(ndf * mult, 1, bias=False))
+        self.gmp_fc = nn.utils.spectral_norm(nn.Linear(ndf * mult, 1, bias=False))
+        self.conv1x1 = nn.Conv2d(ndf * mult * 2, ndf * mult, kernel_size=1, stride=1, bias=True)
+        self.leaky_relu = nn.LeakyReLU(0.2, True)
+
+        self.pad = nn.ReflectionPad2d(1)
+        self.conv = nn.utils.spectral_norm(
+            nn.Conv2d(ndf * mult, 1, kernel_size=4, stride=1, padding=0, bias=False))
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, input):
+        x = self.model(input)   #input   torch.Size([1, 3, 256, 256])
+
+        gap = torch.nn.functional.adaptive_avg_pool2d(x, 1)   #x torch.Size([1, 2048, 7, 7])
         gap_logit = self.gap_fc(gap.view(x.shape[0], -1))
         gap_weight = list(self.gap_fc.parameters())[0]
         gap = x * gap_weight.unsqueeze(2).unsqueeze(3)
@@ -341,7 +595,10 @@ class Discriminator(nn.Module):
         x = torch.cat([gap, gmp], 1)
         x = self.leaky_relu(self.conv1x1(x))
 
+        heatmap = torch.sum(x, dim=1, keepdim=True)
+
         x = self.pad(x)
-        out = self.conv(x)
-        return out.view(-1)
+        out = self.conv(x)   #out.shape  torch.Size([1, 1, 6, 6])
+
+        return out, cam_logit, heatmap
 
