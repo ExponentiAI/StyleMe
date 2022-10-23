@@ -1,7 +1,7 @@
 # StyelMe - pytorch
 A pytorch implementation of image-to-sketch model.
 running environment: python 3.7.0 pytorch 1.12.1
-## 1.0 Data
+## Data
 Include RGB image and sketch image of clothes in various styles.
 
 ## Description
