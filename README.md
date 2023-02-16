@@ -5,15 +5,18 @@ Contain the following two parts：
 
 
 ## 1. Video
-The video link：**[StyleMe Demonstration](https://user-images.githubusercontent.com/43172916/218964923-1f99907c-4841-4cca-a961-fc771f22834f.mp4)**
+- The video link：**[StyleMe Demonstration](https://user-images.githubusercontent.com/43172916/218964923-1f99907c-4841-4cca-a961-fc771f22834f.mp4)**
 
 
 ## 2. Performance
-Here is our model performance:
+- Here is our model performance:
 
+<p align="center">
 <img src='./fig/performance.png#pic_center' width="800px">
+</p>
 
-and the FID and LPIPS during training:
+- and the FID and LPIPS during training:
 
+<p align="center">
 <img src='./fig/fid_lpips.png#pic_center' width="500px">
-
+</p>
