@@ -33,8 +33,12 @@ train_data/
     -...
 ```
 
+<br>
+
 - you can download our datasets which includs 119 RGB images and 119 sketches here: [**styleme datasets**](https://drive.google.com/drive/folders/1UycahUifPoc0n6pyP92bWC07BlJETwRR)
 
+
+<br>
 
 - and then training your models:
 
@@ -42,7 +46,9 @@ train_data/
 python train.py 
 ```
 
--We provided a pretrained model that was trained 30,000 times here: [**styleme model**](https://drive.google.com/drive/folders/1JHmDdsV6OS0sf6v-OhwkpbkDPn7Co2HW)
+<br>
+
+- We provided a pretrained model that was trained 30,000 times here: [**styleme model**](https://drive.google.com/drive/folders/1JHmDdsV6OS0sf6v-OhwkpbkDPn7Co2HW)
 
 ## 3. Evaluate
 
