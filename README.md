@@ -11,10 +11,9 @@ The video link：**[StyleMe Demonstration](https://user-images.githubusercontent
 ## 2. Performance
 Here is our model performance:
 
-<img src='./fig/performance.png' width="800px" #pic_center>
+<img src='./fig/performance.png#pic_center' width="800px">
 
 and the FID and LPIPS during training:
 
-<img src='./fig/fid_lpips.png' width="500px" #pic_center>
-
+<img src='./fig/fid_lpips.png#pic_center' width="500px">
 
