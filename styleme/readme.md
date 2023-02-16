@@ -19,7 +19,7 @@ Related code comments:
 
 ## 2. Training
 
-first prepare your datasets as follows:
+- first prepare your datasets as follows:
 
 ```
 train_data/
@@ -33,11 +33,16 @@ train_data/
     -...
 ```
 
-and then training your models:
+- you can download our datasets which includs 119 RGB images and 119 sketches here: [**styleme datasets**](https://drive.google.com/drive/folders/1UycahUifPoc0n6pyP92bWC07BlJETwRR)
+
+
+- and then training your models:
 
 ```
 python train.py 
 ```
+
+-We provided a pretrained model that was trained 30,000 times here: [**styleme model**](https://drive.google.com/drive/folders/1JHmDdsV6OS0sf6v-OhwkpbkDPn7Co2HW)
 
 ## 3. Evaluate
 
