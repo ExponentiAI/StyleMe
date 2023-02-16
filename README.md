@@ -1,7 +1,7 @@
 # StyleMe
 Our model contains the following two parts：
-- image to sketch model  |  [sketch_generation](https://github.com/ExponentiAI/StyleMe/tree/main/sketch_generation)
-- sketch to image model  |  [style_transform](https://github.com/ExponentiAI/StyleMe/tree/main/styleme)
+- image to sketch model  |  [**sketch_generation**](https://github.com/ExponentiAI/StyleMe/tree/main/sketch_generation)
+- sketch to image model  |  [**style_transform**](https://github.com/ExponentiAI/StyleMe/tree/main/styleme)
 
 
 ## 1. Video
