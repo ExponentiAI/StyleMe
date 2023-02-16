@@ -6,7 +6,11 @@ Contain the following two parts：
 ## Performance
 Here is our model performance:
 
-<img src='fig/performance.png' width="800px">
+<img src='./fig/performance.png' width="800px">
+
+and the FID and LPIPS during training:
+
+<img src='./fig/fid_pips.png' width="600px">
 
 
 ## Video
