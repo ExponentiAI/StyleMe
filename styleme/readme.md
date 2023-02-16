@@ -2,6 +2,16 @@
 - python 3.8.0
 - pytorch 1.12.1
 
+<br>
+
+<p align="center">
+<img src='./framework.png#pic_center' width="600px">
+</p>
+
+<p align="center">Fig.1 An overview of our style transform network of StyleMe</p>
+
+<br>
+
 ## 1. Description
 Related code comments:
 
