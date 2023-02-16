@@ -40,10 +40,10 @@ python train.py
 
 ## Evaluate
 
-You can run the following program to see the effect of style transform:
+You can run the following program to see the performance of our model:
 
 ```
-python train.py 
+python style_transform.py 
 ```
 
 or you can also get the FID and LPIPS:
