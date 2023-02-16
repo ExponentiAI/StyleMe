@@ -50,15 +50,17 @@ python train.py
 
 - We provided a pretrained model that was trained 30,000 times here: [**styleme model**](https://drive.google.com/drive/folders/1JHmDdsV6OS0sf6v-OhwkpbkDPn7Co2HW)
 
+<br>
+
 ## 3. Evaluate
 
-You can run the following program to see the performance of our model:
+- You can run the following program to see the performance of our model:
 
 ```
 python style_transform.py 
 ```
 
-or you can also get the FID and LPIPS:
+- or you can also get the FID and LPIPS:
 
 ```
 python calculate.py 
