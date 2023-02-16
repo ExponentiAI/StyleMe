@@ -10,7 +10,7 @@ Here is our model performance:
 
 and the FID and LPIPS during training:
 
-<img src='./fig/fid_pips.png' width="600px">
+<img src='./fig/fid_lpips.png' width="600px">
 
 
 ## Video
