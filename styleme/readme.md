@@ -1,5 +1,6 @@
 # Environment :
-python 3.8.0 pytorch 1.12.1
+- python 3.8.0
+- pytorch 1.12.1
 
 ## 1. Description
 Related code comments:
