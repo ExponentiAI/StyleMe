@@ -16,7 +16,7 @@ Related code comments:
 * style_transform.py: put your sketch and RGB images to tansform the style.
 
 
-## Training
+## 2. Training
 
 first prepare your datasets as follows:
 
@@ -38,7 +38,7 @@ and then training your models:
 python train.py 
 ```
 
-## Evaluate
+## 3. Evaluate
 
 You can run the following program to see the performance of our model:
 
