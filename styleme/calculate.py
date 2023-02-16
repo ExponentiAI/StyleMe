@@ -149,8 +149,8 @@ def calculate_fid(data_root_colorful, data_root_sketch, model):
 
 if __name__ == "__main__":
     model = 'styleme'
-    data_root_colorful = './train_data/comparison/rgb/'
-    data_root_sketch = './train_data/comparison/sketch/'
+    data_root_colorful = './train_data/rgb/'
+    data_root_sketch = './train_data/sketch/'
     # data_root_colorful = './train_data/comparison/rgb/'
     # data_root_sketch = './train_data/comparison/sketch_styleme/'
     # data_root_sketch = './train_data/comparison/sketch_cam/'
