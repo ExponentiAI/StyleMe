@@ -36,11 +36,7 @@ def calculate_Lpips(data_root_colorful, data_root_sketch, model):
     net_ae.style_encoder.reset_cls()
     net_ig = Generator(ch=CHANNEL, im_size=IM_SIZE)
 
-    # PRETRAINED_AE_PATH = './checkpoint/models/{}/20000.pth'.format(str(model))
-    # print('Pre-trained AE path : ', PRETRAINED_AE_PATH)
-    # net_ae.load_state_dicts(PRETRAINED_AE_PATH)
-
-    PRETRAINED_PATH = './checkpoint/models/{}/GAN.pth'.format(str(model))
+    PRETRAINED_PATH = './checkpoint/GAN.pth'.format(str(model))
     print('Pre-trained path : ', PRETRAINED_PATH)
     ckpt = torch.load(PRETRAINED_PATH)
 
@@ -111,7 +107,7 @@ def calculate_fid(data_root_colorful, data_root_sketch, model):
     net_ae.style_encoder.reset_cls()
     net_ig = Generator(ch=CHANNEL, im_size=IM_SIZE)
 
-    PRETRAINED_PATH = './checkpoint/models/{}/GAN.pth'.format(str(model))
+    PRETRAINED_PATH = './checkpoint/GAN.pth'.format(str(model))
     print('Pre-trained path : ', PRETRAINED_PATH)
     ckpt = torch.load(PRETRAINED_PATH)
 
@@ -152,9 +148,11 @@ def calculate_fid(data_root_colorful, data_root_sketch, model):
 
 
 if __name__ == "__main__":
-    model = 'styleme_wo'
-    data_root_colorful = './train_data/comparison/art_rgb/'
-    data_root_sketch = './train_data/comparison/sketch_styleme/'
+    model = 'styleme'
+    data_root_colorful = './train_data/comparison/rgb/'
+    data_root_sketch = './train_data/comparison/sketch/'
+    # data_root_colorful = './train_data/comparison/rgb/'
+    # data_root_sketch = './train_data/comparison/sketch_styleme/'
     # data_root_sketch = './train_data/comparison/sketch_cam/'
     # data_root_sketch = './train_data/comparison/sketch_adalin/'
     # data_root_sketch = './train_data/comparison/sketch_wo_camada/'
