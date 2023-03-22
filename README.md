@@ -2,6 +2,7 @@
 Our model contains the following two parts：
 - image to sketch model  |  [**sketch_generation**](https://github.com/ExponentiAI/StyleMe/tree/main/sketch_generation)
 - sketch to image model  |  [**style_transform**](https://github.com/ExponentiAI/StyleMe/tree/main/styleme)
+- datasets is available  |  [**clothdataset**](https://drive.google.com/drive/folders/1tAHeblEon0Awb3QchTlLq9Knyc443i3x)
 
 
 ## 1. Video
