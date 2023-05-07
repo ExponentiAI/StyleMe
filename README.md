@@ -1,6 +1,6 @@
 # StyleMe: Towards Intelligent Fashion Generation with Designer Style
 
-Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems (CHI 2023) | [**Paper**](https://dl.acm.org/doi/fullHtml/10.1145/3544548.3581377)
+Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems (**CHI 2023**) | [**Paper**](https://dl.acm.org/doi/fullHtml/10.1145/3544548.3581377)
 
 
 Our model contains the following two parts and datasets is available：
