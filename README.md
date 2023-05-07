@@ -4,9 +4,9 @@ Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems (**
 
 
 Our model contains the following two parts and datasets is available：
-- image to sketch model  |  [**sketch_generation**](https://github.com/ExponentiAI/StyleMe/tree/main/sketch_generation)
-- sketch to image model  |  [**style_transform**](https://github.com/ExponentiAI/StyleMe/tree/main/styleme)
-- clothes dataset  |  [**clothes**](https://drive.google.com/drive/folders/1tAHeblEon0Awb3QchTlLq9Knyc443i3x)
+- **image to sketch module** : [ [**sketch_generation**](https://github.com/ExponentiAI/StyleMe/tree/main/sketch_generation) ]
+- **sketch to image module** : [ [**style_transform**](https://github.com/ExponentiAI/StyleMe/tree/main/styleme) ]
+- **available dataset** : [ [**clothdataset**](https://drive.google.com/drive/folders/1tAHeblEon0Awb3QchTlLq9Knyc443i3x) ]
 
 
 ## 1. Video
