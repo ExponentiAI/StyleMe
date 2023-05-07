@@ -1,4 +1,8 @@
-# StyleMe
+# StyleMe: Towards Intelligent Fashion Generation with Designer Style
+
+Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems (CHI 2023) | [**Paper**](https://dl.acm.org/doi/fullHtml/10.1145/3544548.3581377)
+
+
 Our model contains the following two parts：
 - image to sketch model  |  [**sketch_generation**](https://github.com/ExponentiAI/StyleMe/tree/main/sketch_generation)
 - sketch to image model  |  [**style_transform**](https://github.com/ExponentiAI/StyleMe/tree/main/styleme)
@@ -26,3 +30,25 @@ Our model contains the following two parts：
 <p align="center">
 <img src='./fig/fid_lpips.png#pic_center' width="500px">
 </p>
+
+## 3. Reference
+
+If you find our code or dataset is useful for your research, please cite our paper.
+
+BibTex :
+```
+@inproceedings{wu2023styleme,
+  title={StyleMe: Towards Intelligent Fashion Generation with Designer Style},
+  author={Wu, Di and Yu, Zhiwang and Ma, Nan and Jiang, Jianan and Wang, Yuetian and Zhou, Guixiang and Deng, Hanhui and Li, Yi},
+  booktitle={Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems},
+  pages={1--16},
+  year={2023}
+}
+```
+
+Or :
+```
+Di Wu, Zhiwang Yu, Nan Ma, Jianan Jiang, Yuetian Wang, Guixiang Zhou, Hanhui Deng, Yi Li: StyleMe: Towards Intelligent Fashion Generation with Designer Style. CHI 2023: 23:1-23:16
+```
+
+
