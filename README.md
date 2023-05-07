@@ -12,15 +12,21 @@ Our model contains the following two parts and datasets is available：
 ## 1. Video
 
 <p align="center">
-<img src='./fig/styleme.png#pic_center' width="600px">
+<img src='./fig/styleme.png#pic_center' width="800px">
 </p>
 
 - The video link：**[StyleMe Demonstration](https://user-images.githubusercontent.com/43172916/218964923-1f99907c-4841-4cca-a961-fc771f22834f.mp4)**
 
 
 ## 2. Performance
-- Here is our model performance:
+- Here is our model's performance:
 
+- Sketch Generation
+<p align="center">
+<img src='./fig/sketch.png#pic_center' width="500px">
+</p>
+
+- Style Transfer
 <p align="center">
 <img src='./fig/performance.png#pic_center' width="800px">
 </p>
