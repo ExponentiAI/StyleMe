@@ -3,10 +3,10 @@
 Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems (CHI 2023) | [**Paper**](https://dl.acm.org/doi/fullHtml/10.1145/3544548.3581377)
 
 
-Our model contains the following two parts：
+Our model contains the following two parts and datasets is available：
 - image to sketch model  |  [**sketch_generation**](https://github.com/ExponentiAI/StyleMe/tree/main/sketch_generation)
 - sketch to image model  |  [**style_transform**](https://github.com/ExponentiAI/StyleMe/tree/main/styleme)
-- datasets is available  |  [**clothdataset**](https://drive.google.com/drive/folders/1tAHeblEon0Awb3QchTlLq9Knyc443i3x)
+- clothes dataset  |  [**clothes**](https://drive.google.com/drive/folders/1tAHeblEon0Awb3QchTlLq9Knyc443i3x)
 
 
 ## 1. Video
